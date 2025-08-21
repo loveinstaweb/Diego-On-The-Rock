@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Diego on the Rock — Meme Coin (Demo)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  html{scroll-behavior:smooth}
+  /* ===== Theme tokens ===== */
+  :root{
+    --fg:#e5e7eb; --muted:#9ca3af;
+    --line:rgba(255,255,255,.12);
+    --glass:rgba(255,255,255,.06);
+    --neon1:#22d3ee; /* cyan */
+    --neon2:#f472b6; /* pink */
+    --neon3:#f59e0b; /* amber */
+    --neon4:#a78bfa; /* violet */
+    --bg1:#040406; --bg2:#0a0a0f; /* deep blacks */
+  }
+
+  /* ===== Parallax black background (subtle moving gradients) ===== */
+  .parallax-bg{
+    position:fixed; inset:0; z-index:-3;
+    background:
+      radial-gradient(1200px 700px at 30% 20%, rgba(34,211,238,.08), transparent 60%),
+      radial-gradient(1000px 600px at 80% 70%, rgba(167,139,250,.08), transparent 60%),
+      linear-gradient(180deg, var(--bg1), var(--bg2) 60%, #0b0b12);
+    background-size: 140% 140%, 140% 140%, cover;
+    background-position: 50% 50%, 50% 50%, 50% 50%;
+    filter: saturate(1.05) contrast(1.04);
+    will-change: background-position;
+    transform: translateZ(0) scale(1.02);
+  }
+  .grain{
+    position:fixed; inset:0; z-index:-2; pointer-events:none; opacity:.14; mix-blend-mode:soft-light;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.35"/></svg>');
+  }
+  .overlay{position:fixed; inset:0; z-index:-1; background:radial-gradient(1200px 800px at 50% 0%, rgba(0,0,0,.25), transparent 60%), rgba(0,0,0,.55);}
+
+  @media (prefers-reduced-motion: reduce){
+    .parallax-bg{background-position:50% 50% !important; transform:none !important}
+  }
+
+  /* ===== Utilities & layout ===== */
+  body{color:var(--fg); background:#000; min-height:100vh}
+  .container{max-width:74rem;margin-inline:auto;padding-inline:1rem}
+  .card{background:var(--glass); border:1px solid var(--line); border-radius:1rem}
+  .btn{display:inline-flex;align-items:center;gap:.6rem;padding:.85rem 1.2rem;border-radius:999px;font-weight:800;letter-spacing:.2px}
+  .btn-primary{background:linear-gradient(90deg,var(--neon1),var(--neon2),var(--neon4)); color:#0b0b12}
+  .btn-ghost{border:1px solid rgba(255,255,255,.25)}
+  .reveal{opacity:0;transform:translateY(12px);transition:opacity .6s ease,transform .6s ease}
+  .reveal.visible{opacity:1;transform:none}
+  .progress{position:fixed;left:0;top:0;height:3px;width:0;background:linear-gradient(90deg,var(--neon1),var(--neon3),var(--neon4));z-index:50;box-shadow:0 0 12px rgba(34,211,238,.5)}
+
+  /* Loud colorful section dividers */
+  .divider{
+    height:2px; width:100%;
+    background:linear-gradient(90deg, transparent, var(--neon1), var(--neon2), var(--neon4), transparent);
+    filter:drop-shadow(0 0 8px rgba(250,250,255,.2));
+  }
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.35rem .7rem;font-size:.75rem;opacity:.85}
+
+  /* Tokenomics canvas wrapper */
+  .chart-wrap{position:relative}
+  .chart-center{
+    position:absolute; inset:0; display:grid; place-items:center; pointer-events:none;
+  }
+  .chart-badge{
+    display:grid; place-items:center; width:120px; height:120px; border-radius:50%;
+    background:radial-gradient(80px 80px at 50% 40%, #ffe08a, #f59e0b);
+    box-shadow:0 10px 30px rgba(245,158,11,.25), inset 0 0 0 6px rgba(0,0,0,.25);
+    color:#0b0b12; font-weight:900; text-align:center; line-height:1.1;
+  }
+  .chart-badge small{display:block; font-size:.65rem; opacity:.8}
+
+  /* Lists */
+  .tick li{display:flex;gap:.6rem;align-items:flex-start}
+  .tick li::before{content:"✓"; flex:none; margin-top:.1rem; color:var(--neon1); font-weight:900}
+</style>
+</head>
+<body>
+  <!-- Background -->
+  <div class="parallax-bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="overlay" aria-hidden="true"></div>
+  <div id="progress" class="progress" aria-hidden="true"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-white/10">
+    <div class="container h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Tiny Diego badge -->
+        <svg class="w-8 h-8" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="32" cy="32" r="28" fill="#0e0e16"/>
+          <circle cx="32" cy="30" r="14" fill="#f4c38a"/>
+          <path d="M18 26l14-8 14 8-3 3q-11 3-22 0z" fill="#22d3ee"/>
+          <rect x="26" y="22" width="12" height="6" rx="3" fill="#0b1a4a"/><text x="32" y="26" text-anchor="middle" font-size="4" fill="#fff" font-weight="bold">DG</text>
+        </svg>
+        <span class="font-semibold">Diego on the Rock</span>
+      </div>
+      <nav class="hidden md:flex gap-6 text-sm">
+        <a href="#about" class="hover:opacity-80">About</a>
+        <a href="#features" class="hover:opacity-80">Features</a>
+        <a href="#tokenomics" class="hover:opacity-80">Tokenomics</a>
+        <a href="#roadmap" class="hover:opacity-80">Roadmap</a>
+        <a href="#faq" class="hover:opacity-80">FAQ</a>
+      </nav>
+      <a href="#cta" class="btn btn-primary">Join Diego</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="container py-16">
+    <div class="grid lg:grid-cols-2 gap-10 items-center">
+      <div class="reveal space-y-6">
+        <div class="pill">Demo site · no token sale</div>
+        <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight">
+          Gibraltar’s Meme-in-Chief:<br/> Diego 🐒
+        </h1>
+        <p class="text-white/80 max-w-xl">
+          Part-time officer, full-time banana economist. He protects the timeline, the peels, and your ability to laugh at charts.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#about" class="btn btn-ghost">Meet Diego</a>
+          <a href="#tokenomics" class="btn btn-primary">See Bananaomics</a>
+        </div>
+      </div>
+      <div class="reveal">
+        <!-- Fun SVG mascot -->
+        <svg class="w-64 h-64 mx-auto" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diego badge">
+          <defs>
+            <radialGradient id="fur" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f4c38a"/><stop offset="100%" stop-color="#b96c33"/></radialGradient>
+            <linearGradient id="cap" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+          </defs>
+          <circle cx="110" cy="100" r="56" fill="url(#fur)"/>
+          <circle cx="62" cy="100" r="18" fill="#e9b783"/><circle cx="158" cy="100" r="18" fill="#e9b783"/>
+          <circle cx="95" cy="96" r="6"/><circle cx="125" cy="96" r="6"/>
+          <ellipse cx="110" cy="118" rx="24" ry="18" fill="#f6deb3"/>
+          <path d="M98 126 Q110 134 122 126" stroke="#0b0b12" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M72 80 L110 62 L148 80 L140 86 Q110 92 80 86 Z" fill="url(#cap)"/>
+          <rect x="88" y="71" width="44" height="10" rx="5" fill="#0b1a4a"/>
+          <text x="110" y="79" text-anchor="middle" font-size="7" fill="#fff" font-weight="bold">DIEGO</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- About -->
+  <section id="about" class="container py-12">
+    <div class="card p-6 reveal">
+      <h2 class="text-2xl font-bold">About Diego</h2>
+      <p class="mt-3 text-white/80 leading-relaxed">
+        On the Rock of Gibraltar, customs seized 12 crates of bananas. Diego seized the timeline. He’s the unofficial liaison between tourists, snacks, and sunsets — keeping the peace, the peel, and the memes.
+      </p>
+      <ul class="mt-4 grid sm:grid-cols-3 gap-3 text-white/85 text-sm tick">
+        <li><strong>🍌 No peel left behind</strong> — every banana counts (even the short ones).</li>
+        <li><strong>🪨 Respect the Rock</strong> — views are sacred; shade at noon is law.</li>
+        <li><strong>😂 Memes before meetings</strong> — if you can’t laugh, you can’t hodl a banana.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="container pb-6">
+    <h2 class="text-2xl font-bold mb-4 reveal">Why the Rock Rolls</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="card p-5 reveal"><div class="font-medium mb-1">Rock-Solid Vibes</div><p class="text-sm text-white/75">Weathered stone, weather-proof jokes.</p></div>
+      <div class="card p-5 reveal"><div class="font-medium mb-1">Bay Views</div><p class="text-sm text-white/75">Sunsets that convert tourists into photographers.</p></div>
+      <div class="card p-5 reveal"><div class="font-medium mb-1">Banana Economy</div><p class="text-sm text-white/75">We track bunches, not promises.</p></div>
+      <div class="card p-5 reveal"><div class="font-medium mb-1">Macaque Etiquette</div><p class="text-sm text-white/75">Look with your eyes, not with your lunch.</p></div>
+      <div class="card p-5 reveal"><div class="font-medium mb-1">Tourist Whisperer</div><p class="text-sm text-white/75">One pose. Two treats. Infinite likes.</p></div>
+      <div class="card p-5 reveal"><div class="font-medium mb-1">Serious Fun</div><p class="text-sm text-white/75">Clean layout, chaotic giggles.</p></div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Tokenomics -->
+  <section id="tokenomics" class="container py-12">
+    <div class="grid lg:grid-cols-2 gap-8 items-center">
+      <div class="reveal">
+        <h2 class="text-2xl font-bold">Banana Bunch Tokenomics (Demo)</h2>
+        <p class="text-sm text-white/70 mt-2">
+          This is a playful visualization — there’s no token sale here. Replace with real, verified numbers if you ever launch something.
+        </p>
+        <ul class="mt-4 space-y-2 text-sm text-white/80">
+          <li class="flex items-center gap-3"><span class="w-3 h-3 rounded-sm" style="background:#fde047"></span><span class="grow">Community Stash</span><span>35%</span></li>
+          <li class="flex items-center gap-3"><span class="w-3 h-3 rounded-sm" style="background:#fb923c"></span><span class="grow">Peel Fund (Ops)</span><span>20%</span></li>
+          <li class="flex items-center gap-3"><span class="w-3 h-3 rounded-sm" style="background:#22d3ee"></span><span class="grow">Treehouse Treasury</span><span>20%</span></li>
+          <li class="flex items-center gap-3"><span class="w-3 h-3 rounded-sm" style="background:#a78bfa"></span><span class="grow">Patrol Rewards</span><span>15%</span></li>
+          <li class="flex items-center gap-3"><span class="w-3 h-3 rounded-sm" style="background:#f472b6"></span><span class="grow">Conservation</span><span>10%</span></li>
+        </ul>
+        <p class="text-[11px] text-white/60 mt-2">Percentages above are placeholders for the demo.</p>
+      </div>
+
+      <div class="reveal">
+        <div class="card p-4 chart-wrap">
+          <canvas id="bananaChart" height="320"></canvas>
+          <!-- Center banana badge -->
+          <div class="chart-center">
+            <div class="chart-badge">
+              🍌<br><small>Diego</small>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-white/60 mt-2">Unique donut: rounded arcs + 🍌 emojis marching along segments.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Roadmap -->
+  <section id="roadmap" class="container py-12">
+    <h2 class="text-2xl font-bold mb-4 reveal">Roadmap (Fun & Believable)</h2>
+    <div class="grid md:grid-cols-4 gap-4">
+      <div class="card p-5 reveal"><div class="text-xs uppercase tracking-wider text-white/60">Q1</div><div class="font-semibold mt-1">Banana Diplomacy</div><p class="text-sm text-white/75 mt-2">Ethical banana sourcing. Zero-slip policies.</p></div>
+      <div class="card p-5 reveal"><div class="text-xs uppercase tracking-wider text-white/60">Q2</div><div class="font-semibold mt-1">Meme Patrols</div><p class="text-sm text-white/75 mt-2">Photo challenges across the Rock. Whistles optional.</p></div>
+      <div class="card p-5 reveal"><div class="text-xs uppercase tracking-wider text-white/60">Q3</div><div class="font-semibold mt-1">Banana Vault</div><p class="text-sm text-white/75 mt-2">A tasteful archive of lore & laughs.</p></div>
+      <div class="card p-5 reveal"><div class="text-xs uppercase tracking-wider text-white/60">Q4</div><div class="font-semibold mt-1">Gibraltar Meme Day</div><p class="text-sm text-white/75 mt-2">Community hang. Bring sunscreen.</p></div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- FAQ -->
+  <section id="faq" class="container pb-16">
+    <h2 class="text-2xl font-bold mb-4 reveal">FAQ</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <details class="card p-4 reveal"><summary class="cursor-pointer font-medium">Is this a real coin?</summary><div class="mt-2 text-sm text-white/80">Nope — just a fun demo site. Bananas only.</div></details>
+      <details class="card p-4 reveal"><summary class="cursor-pointer font-medium">Why Gibraltar?</summary><div class="mt-2 text-sm text-white/80">Because Diego lives here rent-free (in our heads) and the views slap.</div></details>
+      <details class="card p-4 reveal"><summary class="cursor-pointer font-medium">Can I join?</summary><div class="mt-2 text-sm text-white/80">Yes. Bring a smile and your camera — memes welcome.</div></details>
+      <details class="card p-4 reveal"><summary class="cursor-pointer font-medium">Where’s the whitepaper?</summary><div class="mt-2 text-sm text-white/80">Printed on a banana peel. It didn’t last.</div></details>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="cta" class="container pb-12">
+    <div class="card p-6 text-center reveal">
+      <div class="text-lg font-semibold">Join Diego’s Troop</div>
+      <p class="text-white/80 text-sm mt-1">No token sale. No promises. Just Gibraltar & giggles.</p>
+      <div class="mt-3"><a href="#about" class="btn btn-primary">Meet the Meme</a></div>
+    </div>
+  </section>
+
+  <footer class="bg-black/40 border-t border-white/10">
+    <div class="container py-8 text-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="opacity-80">© <span id="year"></span> Diego on the Rock</div>
+      <div class="opacity-80">Clean · Loud · Mobile-first</div>
+    </div>
+  </footer>
+
+<script>
+/* Progress bar + reveals */
+document.getElementById('year').textContent = new Date().getFullYear();
+const bar=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100+'%'},{passive:true});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* Subtle parallax on the black gradient blobs */
+(function(){
+  const bg=document.querySelector('.parallax-bg');
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||!bg) return;
+  let ticking=false;
+  function onScroll(){
+    if(ticking) return; ticking=true;
+    requestAnimationFrame(()=>{
+      const h=document.documentElement;
+      const p=h.scrollTop/Math.max(1,(h.scrollHeight-h.clientHeight)); // 0..1
+      const x=50+(Math.sin(p*6)*2);    // tiny lateral wobble
+      const y=50+(p*10);               // gentle downward shift
+      bg.style.backgroundPosition = `% %, % %, 50% 50%`;
+      ticking=false;
+    });
+  }
+  addEventListener('scroll', onScroll, {passive:true});
+  addEventListener('resize', onScroll, {passive:true});
+  onScroll();
+})();
+
+/* ===== Unique Banana Tokenomics (Chart.js + custom emoji marcher) ===== */
+(function(){
+  const c=document.getElementById('bananaChart');
+  if(!c) return;
+
+  const data = [35,20,20,15,10];
+  const labels = ['Community Stash','Peel Fund (Ops)','Treehouse Treasury','Patrol Rewards','Conservation'];
+  const colors = ['#fde047','#fb923c','#22d3ee','#a78bfa','#f472b6'];
+
+  // Chart with rounded arcs + thick spacing
+  const chart = new Chart(c, {
+    type:'doughnut',
+    data:{ labels, datasets:[{
+      data, backgroundColor: colors, borderWidth: 0, hoverOffset: 3,
+      // Rounded ends (Chart.js 3+)
+      borderRadius: 12, spacing: 6, cutout: '62%'
+    }]},
+    options:{
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
+        label: ctx => ` : %`
+      }}},
+      animation:{ duration: 900, easing: 'easeOutQuart' }
+    }
+  });
+
+  // 🍌 Emoji marcher plugin: sprinkle bananas along the two largest arcs.
+  const bananaPlugin = {
+    id:'bananaEmojiMarch',
+    afterDatasetsDraw(chart, args, pluginOptions){
+      const {ctx, chartArea:{left,top,right,bottom}, _metasets} = chart;
+      const meta = _metasets[0];
+      const cw = right-left, ch = bottom-top;
+      const cx = left + cw/2, cy = top + ch/2;   // canvas center
+      const ir = meta.data[0].innerRadius;       // inner radius
+      const or = meta.data[0].outerRadius;       // outer radius
+      const mr = (ir+or)/2;                      // mid radius to draw emojis
+
+      // sort arcs by value desc and take a couple
+      const arcs = meta.data.map((arc,i)=>({arc,i,val:data[i]}))
+                            .sort((a,b)=>b.val-a.val).slice(0,2);
+
+      ctx.save();
+      ctx.font = '16px system-ui,apple color emoji,Segoe UI Emoji,Segoe UI Symbol';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+      arcs.forEach(({arc,i,val})=>{
+        const sa = arc.startAngle, ea = arc.endAngle;
+        // number of bananas proportional to arc length
+        const bananas = Math.max(3, Math.round((ea-sa)*mr/80));
+        for(let k=0;k<bananas;k++){
+          const t = sa + (k+0.5)/(bananas) * (ea-sa);
+          const x = cx + mr * Math.cos(t);
+          const y = cy + mr * Math.sin(t);
+          ctx.save();
+          ctx.translate(x,y);
+          ctx.rotate(t+Math.PI/2);
+          ctx.fillText('🍌',0,0);
+          ctx.restore();
+        }
+      });
+      ctx.restore();
+    }
+  };
+  Chart.register(bananaPlugin);
+  chart.update();
+})();
+</script>
+</body>
